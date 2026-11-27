@@ -47,7 +47,7 @@ Amounts are shown in rupees with Indian digit grouping, for example `₹1,25,000
 1. Open the [live app](https://fin-track-six-flame.vercel.app). It starts with sample data.
 2. Explore, then press **Clear sample data**.
 3. Add your first transaction in the quick-add bar.
-4. Go to **Data → Full backup** from time to time.
+4. Go to **Import & Export → Full backup** from time to time.
 
 ### Run it on your computer
 
@@ -73,6 +73,9 @@ Then open the address printed in the terminal, usually http://localhost:5173.
 
 ## Using the app
 
+A short tour opens on your first visit. The **Guide** tab covers the same ground in more detail and can
+replay the tour.
+
 ### Quick add
 
 Type one line and press **Add**. A preview shows how it will be saved.
@@ -93,7 +96,7 @@ Dates are read day first. `k`, `L`/`lakh` and `cr` suffixes work.
 Paste one or more bank or UPI alerts. The app reads amount, payee, date and account offline, shows a
 preview, and imports only the rows you keep.
 
-### Bank statements (Data tab)
+### Bank statements (Import & Export tab)
 
 1. Choose an `.xlsx`, `.xls` or `.csv` file.
 2. Check the column mapping (Date, Narration, Debit, Credit, Account). Presets exist for HDFC, ICICI
@@ -101,7 +104,7 @@ preview, and imports only the rows you keep.
 3. Review the preview. Likely duplicates are flagged and left unticked.
 4. Import.
 
-### Export and backup (Data tab)
+### Export and backup (Import & Export tab)
 
 | Button | Contents |
 |---|---|
@@ -234,7 +237,7 @@ names. Data is saved under keys starting `fin_tracker_v1_`.
 **Where your data lives.** In your browser's `localStorage`. It does not sync, and each browser and web
 address has its own copy. Clearing site data deletes it, so keep backups.
 
-**App lock (Data tab, off by default).** Encrypts stored data with AES-256-GCM using a key derived
+**App lock (Import & Export tab, off by default).** Encrypts stored data with AES-256-GCM using a key derived
 from your passphrase (PBKDF2), and locks after 10 idle minutes.
 **A forgotten passphrase cannot be recovered.** Exported files are not encrypted, and the lock cannot
 stop a malicious browser extension while the app is unlocked.

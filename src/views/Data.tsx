@@ -40,11 +40,11 @@ export default function DataView() {
 
   return (
     <div className="space-y-4">
+      <StatementImporter />
       <Card title="Sample data">
         <SampleControls />
       </Card>
       <AppLock />
-      <StatementImporter />
       <Card title="Excel export">
         <p className="mb-3 text-sm text-muted">
           The report has Transactions, Monthly Summary, Recurring Bills and Savings Goals. The full backup also holds Budgets and Keyword Rules,

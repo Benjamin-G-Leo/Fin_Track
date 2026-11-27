@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Database, Sparkles, LayoutDashboard, List, PiggyBank, Repeat, Tags, Target } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleHelp, Database, Sparkles, LayoutDashboard, List, PiggyBank, Repeat, Tags, Target } from 'lucide-react';
 import OpenRouterModal, { openAiSettings } from './components/OpenRouterModal';
+import Tour from './components/Tour';
+import Guide from './views/Guide';
 import SampleControls from './components/SampleControls';
 import { Button } from './components/ui';
 import { monthKey, monthLabel, shiftMonth, todayISO } from './lib/dates';
@@ -21,7 +23,8 @@ const TABS = [
   { id: 'bills', label: 'Bills', icon: Repeat },
   { id: 'goals', label: 'Goals', icon: Target },
   { id: 'rules', label: 'Rules', icon: Tags },
-  { id: 'data', label: 'Data', icon: Database },
+  { id: 'data', label: 'Import & Export', icon: Database },
+  { id: 'guide', label: 'Guide', icon: CircleHelp },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
@@ -55,7 +58,7 @@ export default function App() {
           </div>
         )}
       </header>
-      <nav className="mb-4 flex gap-1 overflow-x-auto border-b border-line" aria-label="Sections">
+      <nav className="mb-4 flex flex-wrap gap-x-1 border-b border-line" aria-label="Sections">
         {TABS.map(({ id, label, icon: Icon }) => (
           <a key={id} href={`#${id}`} aria-current={tab === id ? 'page' : undefined}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm whitespace-nowrap ${tab === id ? 'border-accent font-semibold' : 'border-transparent text-muted'}`}>
@@ -64,7 +67,7 @@ export default function App() {
         ))}
       </nav>
       {storageError && <p role="alert" className="mb-4 rounded-lg border border-danger p-3 text-sm text-danger">{storageError}</p>}
-      {sample && tab !== 'data' && <div className="mb-4 rounded-lg border border-line bg-surface p-3"><SampleControls /></div>}
+      {sample && tab !== 'data' && tab !== 'guide' && <div className="mb-4 rounded-lg border border-line bg-surface p-3"><SampleControls /></div>}
       <main>
         {tab === 'dashboard' && <Dashboard month={month} />}
         {tab === 'transactions' && <Transactions month={month} />}
@@ -73,8 +76,10 @@ export default function App() {
         {tab === 'goals' && <Goals />}
         {tab === 'rules' && <Rules />}
         {tab === 'data' && <DataView />}
+        {tab === 'guide' && <Guide />}
       </main>
       <OpenRouterModal />
+      <Tour />
     </div>
   );
 }

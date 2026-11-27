@@ -77,6 +77,9 @@ export const billDays = stored<Record<string, number>>('billDays', {}, (raw) => 
   return raw as Record<string, number>;
 });
 
+/** Whether the first-visit tour has been closed. */
+export const guideSeen = stored<boolean>('guideSeen', false, (raw) => raw === true);
+
 export interface AiSettings { apiKey: string; model: string; denyDataCollection?: boolean; privateWords?: string }
 export const aiSettings = stored<AiSettings>('openrouter', { apiKey: '', model: DEFAULT_MODEL }, (raw) => {
   const r = raw as Partial<AiSettings>;
