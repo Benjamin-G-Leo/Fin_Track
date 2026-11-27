@@ -34,7 +34,7 @@ Your records stay in your own browser. There is no account, no server and no dat
 | **Reimbursements** | "Owed to Me" tracker for money others need to pay back |
 | **Automation** | Keyword rules that categorise merchants for you |
 | **Data** | Excel and CSV export, full backup and restore |
-| **Optional AI** | Parsing, categorising and monthly savings tips through your own OpenRouter key |
+| **Optional AI** | Parsing, categorising and monthly savings tips using free models through your own OpenRouter key |
 | **Protection** | Optional passphrase encryption |
 
 Everything except the AI features works without an internet connection once the app has loaded.
@@ -114,13 +114,23 @@ A backup does not include your API key, app settings or saved import presets.
 
 ### Optional AI features
 
-Open **AI settings**, add an [OpenRouter](https://openrouter.ai) key and pick a model. This unlocks:
+Open **AI settings** and add an [OpenRouter](https://openrouter.ai) key. This unlocks:
 
 - **AI parse** for a quick-add line
 - **AI Categorize Unmatched** in smart paste and statement import
 - **Generate AI Insights** on the dashboard
 
-OpenRouter may charge for usage. Use a key with a low spending limit.
+#### Free models only
+
+Fin Track never uses paid models.
+
+- The default is `openrouter/free`, which picks from the free models currently available.
+- You can choose another model only if its ID ends in `:free`.
+- Every request sets a maximum price of zero, so OpenRouter should refuse it rather than bill you.
+
+Free models have trade-offs: answers can be less accurate and vary between requests, you may hit rate
+limits, and some are unavailable while **Only use providers that do not store prompts** is ticked.
+Always check results before saving. A low spending limit on your key is still sensible.
 
 ## How the numbers are calculated
 
@@ -255,6 +265,16 @@ This project has not had an independent security audit.
 | `npm run build` | Type-check and create the production build in `dist/` |
 | `npm run preview` | Serve that build with the production security headers |
 
+### Code map
+
+If you use [graphify](https://docs.graphify.com), you can build a knowledge graph of the code. The
+output goes to `graphify-out/` on your computer and is not part of the repository. Open `graph.html`
+in a browser, or read `GRAPH_REPORT.md`.
+
+```bash
+graphify update .
+```
+
 ### Making a change
 
 1. Update `main`, then create a branch.
@@ -280,7 +300,7 @@ Vercel does not necessarily wait for the GitHub check, so merge only once it has
 
 - Bank presets and SMS reading have been tested on made-up examples, not a full range of real files.
   Always check the preview.
-- AI features have been tested with simulated replies, not a live key.
+- AI features have had only a brief live test with made-up data. Free model quality is uneven.
 - Statements with a single amount column and a Dr/Cr marker are not supported.
 - No account balances, multi-device sync or multiple currencies.
 - Fin Track is a record-keeping tool, not financial advice.
