@@ -5,6 +5,7 @@ export const CATEGORIES = [
 ] as const;
 export const SPENDING_NATURES = ['Fixed Need', 'Variable Need', 'Want', 'Savings'] as const;
 export const FREQUENCIES = ['Monthly', 'Quarterly', 'Yearly'] as const;
+export const MONTHS_PER: Record<(typeof FREQUENCIES)[number], number> = { Monthly: 1, Quarterly: 3, Yearly: 12 };
 export const DEFAULT_ACCOUNTS = ['HDFC UPI', 'ICICI Credit Card', 'SBI Savings', 'Cash'];
 
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];

@@ -38,7 +38,7 @@ export default function QuickAdd() {
   return (
     <Card title="Quick add" action={<Button onClick={() => { setManual(!manual); setAiDraft(null); }}><Plus size={16} />Manual entry</Button>}>
       <form onSubmit={submit} className="flex flex-wrap gap-2">
-        <input className="field !w-auto min-w-0 flex-1 basis-56" aria-label="Quick add" placeholder='e.g. "450 swiggy hdfc upi yesterday"'
+        <input className="field !w-auto min-w-0 flex-1 basis-56" aria-label="Quick add" maxLength={300} placeholder='e.g. "450 swiggy hdfc upi yesterday"'
           value={line} onChange={(e) => { setLine(e.target.value); setAiDraft(null); setMessage(''); }} />
         <Button type="submit" variant="primary"><Zap size={16} />Add</Button>
         {ai.apiKey && <Button onClick={askAi} disabled={busy || !line.trim() || !navigator.onLine}><Sparkles size={16} />{busy ? 'Asking…' : 'AI parse'}</Button>}

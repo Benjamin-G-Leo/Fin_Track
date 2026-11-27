@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import { Download, Upload } from 'lucide-react';
-import { Button, Card, Field, Select } from '../components/ui';
+import { Button, Card, Select } from '../components/ui';
 import { todayISO } from '../lib/dates';
-import { applyImport, exportExcel, importExcel } from '../lib/excel';
+import { applyImport, FileLimit, exportCsv, exportExcel, importExcel } from '../lib/excel';
 import { mergeTransactions } from '../lib/ids';
-import { useStored } from '../lib/storage';
+import AppLock from '../components/AppLock';
+import { openAiSettings } from '../components/OpenRouterModal';
 import SampleControls from '../components/SampleControls';
-import { aiSettings, commit, useData } from '../store';
+import StatementImporter from '../components/StatementImporter';
+import { commit, useData } from '../store';
 
 const MERGE = 'Merge with current data';
 const REPLACE = 'Replace sheets found in the file';
 
 export default function DataView() {
   const data = useData();
-  const ai = useStored(aiSettings);
   const [mode, setMode] = useState(MERGE);
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
@@ -32,8 +33,8 @@ export default function DataView() {
       }
       commit(next);
       setMessage(`Imported: ${added} transactions added, ${skipped} duplicates skipped.`);
-    } catch {
-      setMessage('That file could not be read as a spreadsheet.');
+    } catch (err) {
+      setMessage(err instanceof FileLimit ? err.message : 'That file could not be read as a spreadsheet.');
     }
   };
 
@@ -42,11 +43,20 @@ export default function DataView() {
       <Card title="Sample data">
         <SampleControls />
       </Card>
+      <AppLock />
+      <StatementImporter />
       <Card title="Excel export">
-        <p className="mb-3 text-sm text-muted">Everything except your API key, one sheet per record type. Browser storage can be cleared, so export regularly as a backup.</p>
-        <Button variant="primary" onClick={() => exportExcel(data, `fin-track-${todayISO()}.xlsx`)}><Download size={16} />Export .xlsx</Button>
+        <p className="mb-3 text-sm text-muted">
+          The report has Transactions, Monthly Summary, Recurring Bills and Savings Goals. The full backup also holds Budgets and Keyword Rules,
+          so use it to protect your data. Your API key is never exported.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="primary" onClick={() => exportExcel(data, `fin-track-${todayISO()}.xlsx`)}><Download size={16} />Export .xlsx</Button>
+          <Button onClick={() => exportExcel(data, `fin-track-backup-${todayISO()}.xlsx`, true)}><Download size={16} />Full backup</Button>
+          <Button onClick={() => exportCsv(data, `fin-track-transactions-${todayISO()}.csv`)}><Download size={16} />Transactions .csv</Button>
+        </div>
       </Card>
-      <Card title="Excel / CSV import">
+      <Card title="Restore from a Fin Track file">
         <p className="mb-3 text-sm text-muted">Use the column names from an export. Dates: YYYY-MM-DD or DD/MM/YYYY. A CSV is read as transactions.</p>
         <div className="flex flex-wrap items-center gap-2">
           <div className="w-72 max-w-full"><Select label="Import mode" value={mode} options={[MERGE, REPLACE]} onChange={setMode} /></div>
@@ -67,15 +77,8 @@ export default function DataView() {
         )}
       </Card>
       <Card title="OpenRouter (optional)">
-        <p className="mb-3 text-sm text-muted">
-          Adds an “AI parse” button to quick add. Only the line you type, today’s date and your account names are sent to OpenRouter.
-          The key is stored unencrypted in this browser, so use one with a low spending limit. Everything else works without it.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="API key"><input className="field" type="password" autoComplete="off" value={ai.apiKey} onChange={(e) => aiSettings.set({ ...ai, apiKey: e.target.value.trim() })} /></Field>
-          <Field label="Model"><input className="field" value={ai.model} onChange={(e) => aiSettings.set({ ...ai, model: e.target.value.trim() })} /></Field>
-        </div>
-        {ai.apiKey && <div className="mt-3"><Button variant="danger" onClick={() => aiSettings.set({ ...ai, apiKey: '' })}>Remove key</Button></div>}
+        <p className="mb-3 text-sm text-muted">AI parse, SMS cleanup and monthly insights. Everything else works without it.</p>
+        <Button onClick={openAiSettings}>AI settings</Button>
       </Card>
     </div>
   );

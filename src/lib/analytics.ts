@@ -1,4 +1,4 @@
-import { CATEGORIES, SPENDING_NATURES, type Budget, type RecurringBill, type SinkingFund, type Transaction } from '../types';
+import { CATEGORIES, MONTHS_PER, SPENDING_NATURES, type Budget, type RecurringBill, type SinkingFund, type Transaction } from '../types';
 import { addDays, addMonths, daysBetween, monthKey, shiftMonth } from './dates';
 import { round2 } from './format';
 import { normalizeMerchant } from './ids';
@@ -71,7 +71,13 @@ export function safeToSpend(all: Transaction[], bills: RecurringBill[], target: 
   const { income, expense, invested } = monthSummary(all, monthKey(today));
   const end = monthEnd(today);
   const due = bills.filter((b) => b.nextDueDate <= end);
-  const total = (list: RecurringBill[]) => round2(list.reduce((a, b) => a + b.amount, 0));
+  // A bill several periods behind is owed once for each missed date.
+  const times = (b: RecurringBill) => {
+    let n = 0;
+    for (let d = b.nextDueDate; d <= end && n < 600; d = addMonths(b.nextDueDate, ++n * MONTHS_PER[b.frequency])) { /* count */ }
+    return n;
+  };
+  const total = (list: RecurringBill[]) => round2(list.reduce((a, b) => a + b.amount * times(b), 0));
   const fixedBills = total(due.filter((b) => b.category !== 'Investments'));
   const baseTarget = target > 0 ? target : round2(income * 0.2);
   const savings = Math.max(baseTarget, round2(invested + total(due.filter((b) => b.category === 'Investments'))));

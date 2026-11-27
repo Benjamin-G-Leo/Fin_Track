@@ -2,8 +2,13 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import vercel from './vercel.json' with { type: 'json' };
+
+// `npm run preview` serves the same security headers as production, so a CSP break shows up locally.
+const headers = Object.fromEntries(vercel.headers[0]!.headers.map((h) => [h.key, h.value]));
 
 export default defineConfig({
+  preview: { headers },
   plugins: [
     react(),
     tailwindcss(),

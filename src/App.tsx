@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Database, LayoutDashboard, List, PiggyBank, Repeat, Tags, Target } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Database, Sparkles, LayoutDashboard, List, PiggyBank, Repeat, Tags, Target } from 'lucide-react';
+import OpenRouterModal, { openAiSettings } from './components/OpenRouterModal';
 import SampleControls from './components/SampleControls';
 import { Button } from './components/ui';
 import { monthKey, monthLabel, shiftMonth, todayISO } from './lib/dates';
@@ -44,11 +45,12 @@ export default function App() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-4">
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold">₹ Fin Track</h1>
+        <h1 className="mr-auto text-xl font-bold">₹ Fin Track</h1>
+        <Button onClick={openAiSettings}><Sparkles size={14} />AI settings</Button>
         {usesMonth && (
           <div className="flex items-center gap-2">
             <Button aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}><ChevronLeft size={16} /></Button>
-            <span className="w-20 text-center text-sm font-medium">{monthLabel(month)}</span>
+            <span className="w-24 text-center text-sm font-medium">{monthLabel(month)}</span>
             <Button aria-label="Next month" onClick={() => setMonth(shiftMonth(month, 1))}><ChevronRight size={16} /></Button>
           </div>
         )}
@@ -72,6 +74,7 @@ export default function App() {
         {tab === 'rules' && <Rules />}
         {tab === 'data' && <DataView />}
       </main>
+      <OpenRouterModal />
     </div>
   );
 }

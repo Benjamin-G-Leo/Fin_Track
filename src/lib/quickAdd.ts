@@ -1,7 +1,9 @@
 import { CATEGORIES, type Category, type KeywordRule, type TransactionDraft, type TransactionType } from '../types';
+import { detectAccount } from './accounts';
 import { addDays, makeISO, todayISO } from './dates';
 import { round2 } from './format';
 import { matchRule } from './rules';
+import { isCardBill, isOwnTransfer } from './transfers';
 import { defaultNature, oneOf } from './validate';
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -53,17 +55,11 @@ export function parseQuickAdd(
   if (!chosen) return null;
   rest = rest.slice(0, chosen.index) + ' ' + rest.slice(chosen.index + chosen.length);
 
-  // Account: full name first, then any single distinctive word from a known account.
-  let account = '';
-  const byLength = [...accounts].sort((a, b) => b.length - a.length);
-  const wordRe = (w: string) => new RegExp(`(?<=\\s)${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s)`, 'i');
-  for (const name of byLength) if (!account && take(wordRe(name))) account = name;
-  if (!account) {
-    for (const alias of ['credit card', 'upi', 'cash', 'hdfc', 'icici', 'sbi', 'axis', 'kotak']) {
-      const owner = accounts.find((a) => a.toLowerCase().includes(alias));
-      if (owner && take(wordRe(alias))) { account = owner; break; }
-    }
-  }
+  const cardBill = isCardBill(input);
+  // "credit card bill" says what was paid, not which account paid it.
+  const named = detectAccount(rest, accounts, cardBill);
+  const account = named.account;
+  rest = named.rest;
 
   const tag = take(/(?<=\s)#(\S+)(?=\s)/);
   const merchantText = rest.replace(/(?<=\s)(paid|spent|on|for|at|to|via|from|using|by)(?=\s)/gi, ' ').replace(/\s+/g, ' ').trim();
@@ -72,7 +68,7 @@ export function parseQuickAdd(
   let category: Category = taggedCategory ?? oneOf(rule?.category, CATEGORIES) ?? 'Other';
 
   let type: TransactionType = 'Expense';
-  if (/\b(transfer(red)?|self)\b/i.test(input)) type = 'Transfer';
+  if (isOwnTransfer(input) || /\btransfer(red)?\b/i.test(input)) { type = 'Transfer'; category = 'Other'; }
   else if (category === 'Salary' || /\b(income|received|credited|refund|cashback|interest|dividend)\b/i.test(input)) type = 'Income';
   else if (category === 'Investments' || /\b(invest(ed|ment)?|sip)\b/i.test(input)) { type = 'Investment'; category = 'Investments'; }
 

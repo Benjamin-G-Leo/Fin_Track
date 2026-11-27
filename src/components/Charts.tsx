@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { monthLabel } from '../lib/dates';
+import { monthTick } from '../lib/dates';
 import { formatINR, formatINRCompact } from '../lib/format';
 import { Button, Card, Empty } from './ui';
 
@@ -35,7 +35,7 @@ function ChartCard({ title, head, rows, empty, children }: {
 }
 
 export function TrendChart({ data }: { data: { month: string; income: number; expense: number; invested: number }[] }) {
-  const rows = data.map((d) => ({ ...d, label: monthLabel(d.month) }));
+  const rows = data.map((d) => ({ ...d, label: monthTick(d.month) }));
   return (
     <ChartCard title="Last 6 months" head={['Month', 'Income', 'Expenses', 'Invested']}
       rows={rows.map((r) => [r.label, r.income, r.expense, r.invested])}

@@ -1,6 +1,7 @@
 import { BudgetChart, CumulativeChart, TrendChart } from '../components/Charts';
 import SafeToSpend from '../components/SafeToSpend';
 import SplitCard from '../components/SplitCard';
+import Insights from '../components/Insights';
 import QuickAdd from '../components/QuickAdd';
 import { saveTransaction } from '../components/TransactionForm';
 import { Button, Card, Empty } from '../components/ui';
@@ -39,6 +40,7 @@ export default function Dashboard({ month }: { month: string }) {
         <BudgetChart data={categoryVsBudget(transactions, budgets, month)} />
         <CumulativeChart data={cumulativeSpend(transactions, month, today)} />
       </div>
+      <Insights key={month} month={month} />
       <TrendChart data={trend(transactions, month)} />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Bills due in 30 days">

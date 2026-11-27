@@ -7,6 +7,8 @@ import { makeISO } from './dates';
 import { round2 } from './format';
 import { randomId } from './ids';
 
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
 export type Row = Record<string, unknown>;
 
 export const text = (v: unknown): string => (v === null || v === undefined ? '' : String(v).trim());
@@ -34,6 +36,11 @@ export function parseDate(v: unknown): string | null {
   if (m) return makeISO(Number(m[1]), Number(m[2]), Number(m[3]));
   m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/.exec(s);
   if (m) return makeISO(Number(m[3]) < 100 ? 2000 + Number(m[3]) : Number(m[3]), Number(m[2]), Number(m[1]));
+  m = /^(\d{1,2})[ /-]([A-Za-z]{3,9})[ ,/-]+(\d{2}|\d{4})$/.exec(s);
+  if (m) {
+    const month = MONTHS.indexOf(m[2]!.slice(0, 3).toLowerCase()) + 1;
+    return month ? makeISO(Number(m[3]) < 100 ? 2000 + Number(m[3]) : Number(m[3]), month, Number(m[1])) : null;
+  }
   return null;
 }
 

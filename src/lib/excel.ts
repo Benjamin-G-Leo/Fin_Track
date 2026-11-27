@@ -1,8 +1,11 @@
 import * as XLSX from 'xlsx';
 import type { AppData, TransactionDraft } from '../types';
+import { byNature, monthSummary } from './analytics';
+import { monthKey } from './dates';
+import { round2 } from './format';
 import { parseBill, parseBudget, parseFund, parseRule, parseTransaction, text, type Parsed, type Row } from './validate';
 
-/** Sheet names and column headers are exactly the schema field names, so the UI and Excel stay aligned. */
+/** Column headers are exactly the schema field names, so the UI and Excel stay aligned. */
 export const SHEETS = {
   Transactions: ['id', 'date', 'type', 'amount', 'category', 'subCategory', 'spendingNature', 'account', 'merchant', 'isReimbursable'],
   Budgets: ['category', 'monthlyLimit'],
@@ -12,33 +15,77 @@ export const SHEETS = {
 } as const;
 type SheetName = keyof typeof SHEETS;
 
-const MONEY = new Set(['amount', 'monthlyLimit', 'targetAmount', 'currentSaved']);
+/** Tab titles as written; earlier exports used the keys themselves, which import still accepts. */
+const TITLES: Record<SheetName, string> = {
+  Transactions: 'Transactions', Budgets: 'Budgets', RecurringBills: 'Recurring Bills',
+  SinkingFunds: 'Savings Goals', KeywordRules: 'Keyword Rules',
+};
+const SUMMARY_TITLE = 'Monthly Summary';
+const SUMMARY_HEADER = ['month', 'income', 'expense', 'invested', 'net', 'needs', 'wants'];
+
+const MONEY = new Set(['amount', 'monthlyLimit', 'targetAmount', 'currentSaved', 'income', 'expense', 'invested', 'net', 'needs', 'wants']);
 const INR_FORMAT = '[>=10000000]"₹"##\\,##\\,##\\,##0.00;[>=100000]"₹"##\\,##\\,##0.00;"₹"##,##0.00';
 
-export function buildWorkbook(data: AppData): XLSX.WorkBook {
-  const rows: Record<SheetName, readonly object[]> = {
-    Transactions: [...data.transactions].sort((a, b) => b.date.localeCompare(a.date)),
-    Budgets: data.budgets, RecurringBills: data.bills, SinkingFunds: data.funds, KeywordRules: data.rules,
-  };
+/** Derived, read-only view: one row per month that has transactions. Ignored on import. */
+export function summaryRows(all: AppData['transactions']) {
+  return [...new Set(all.map((t) => monthKey(t.date)))].sort().reverse().map((month) => {
+    const { income, expense, invested, net } = monthSummary(all, month);
+    const split = byNature(all, month);
+    const of = (...names: string[]) => round2(split.filter((x) => names.includes(x.name)).reduce((a, x) => a + x.value, 0));
+    return { month, income, expense, invested, net, needs: of('Fixed Need', 'Variable Need'), wants: of('Want') };
+  });
+}
+
+function makeSheet(header: string[], rows: readonly object[]): XLSX.WorkSheet {
+  const sheet = XLSX.utils.json_to_sheet([...rows], { header });
+  header.forEach((h, c) => {
+    if (!MONEY.has(h)) return;
+    for (let r = 1; r <= rows.length; r++) {
+      const cell = sheet[XLSX.utils.encode_cell({ r, c })] as XLSX.CellObject | undefined;
+      // The Indian grouping format only covers positive values; negatives use a plain format.
+      if (cell) cell.z = Number(cell.v) < 0 ? '"₹"#,##0.00;-"₹"#,##0.00' : INR_FORMAT;
+    }
+  });
+  sheet['!cols'] = header.map((h) => ({ wch: h === 'merchant' || h === 'goalName' || h === 'name' ? 28 : 18 }));
+  sheet['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: header.length - 1 } }) };
+  return sheet;
+}
+
+const newestFirst = (list: AppData['transactions']) => [...list].sort((a, b) => b.date.localeCompare(a.date));
+
+/** The four report tabs; `backup` also adds Budgets and Keyword Rules so everything can be restored. */
+export function buildWorkbook(data: AppData, backup = false): XLSX.WorkBook {
   const book = XLSX.utils.book_new();
-  for (const name of Object.keys(SHEETS) as SheetName[]) {
-    const header = [...SHEETS[name]] as string[];
-    const sheet = XLSX.utils.json_to_sheet([...rows[name]], { header });
-    header.forEach((h, c) => {
-      if (!MONEY.has(h)) return;
-      for (let r = 1; r <= rows[name].length; r++) {
-        const cell = sheet[XLSX.utils.encode_cell({ r, c })] as XLSX.CellObject | undefined;
-        if (cell) cell.z = INR_FORMAT;
-      }
-    });
-    sheet['!cols'] = header.map((h) => ({ wch: h === 'merchant' || h === 'goalName' ? 28 : 18 }));
-    XLSX.utils.book_append_sheet(book, sheet, name);
+  const add = (name: SheetName, rows: readonly object[]) =>
+    XLSX.utils.book_append_sheet(book, makeSheet([...SHEETS[name]], rows), TITLES[name]);
+  add('Transactions', newestFirst(data.transactions));
+  XLSX.utils.book_append_sheet(book, makeSheet(SUMMARY_HEADER, summaryRows(data.transactions)), SUMMARY_TITLE);
+  add('RecurringBills', data.bills);
+  add('SinkingFunds', data.funds);
+  if (backup) {
+    add('Budgets', data.budgets);
+    add('KeywordRules', data.rules);
   }
   return book;
 }
 
-export const exportExcel = (data: AppData, filename: string) =>
-  XLSX.writeFile(buildWorkbook(data), filename, { compression: true });
+export const exportExcel = (data: AppData, filename: string, backup = false) =>
+  XLSX.writeFile(buildWorkbook(data, backup), filename, { compression: true });
+
+/** Text cells starting like a formula are quoted so a spreadsheet will not execute them. */
+export function transactionsCsv(data: AppData): string {
+  const safe = newestFirst(data.transactions).map((t) => Object.fromEntries(
+    Object.entries(t).map(([k, v]) => [k, typeof v === 'string' && /^[=+\-@\t\r]/.test(v) ? `'${v}` : v])));
+  return XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(safe, { header: [...SHEETS.Transactions] }));
+}
+
+export function exportCsv(data: AppData, filename: string) {
+  // The BOM makes Excel read the file as UTF-8.
+  const url = URL.createObjectURL(new Blob(['\uFEFF', transactionsCsv(data)], { type: 'text/csv;charset=utf-8' }));
+  const link = Object.assign(document.createElement('a'), { href: url, download: filename });
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 export interface ImportResult {
   transactions: TransactionDraft[];
@@ -55,16 +102,21 @@ export interface ImportResult {
 function normalizeRow(row: Row, fields: readonly string[]): Row {
   const canon = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '');
   const lookup = new Map(fields.map((f) => [canon(f), f]));
-  return Object.fromEntries(Object.entries(row).map(([k, v]) => [lookup.get(canon(k)) ?? k, v]));
+  const unquote = (v: unknown) => (typeof v === 'string' ? v.replace(/^'(?=[=+\-@])/, '') : v);
+  return Object.fromEntries(Object.entries(row).map(([k, v]) => [lookup.get(canon(k)) ?? k, unquote(v)]));
 }
+
+const same = (a: string, b: string) => a.replace(/\s/g, '').toLowerCase() === b.replace(/\s/g, '').toLowerCase();
+const isKnown = (sheet: string) => same(sheet, SUMMARY_TITLE)
+  || (Object.keys(SHEETS) as SheetName[]).some((n) => same(sheet, n) || same(sheet, TITLES[n]));
 
 export function readWorkbook(book: XLSX.WorkBook): ImportResult {
   const errors: string[] = [];
   const present = new Set<SheetName>();
   const read = <T>(name: SheetName, parse: (r: Row) => Parsed<T>): T[] => {
-    // A single-sheet file (e.g. a CSV) is treated as a transaction list.
-    const known = book.SheetNames.some((s) => s in SHEETS);
-    const actual = book.SheetNames.find((s) => s.toLowerCase() === name.toLowerCase())
+    // A single unrecognised sheet (e.g. a CSV) is treated as a transaction list.
+    const known = book.SheetNames.some((s) => isKnown(s));
+    const actual = book.SheetNames.find((s) => same(s, name) || same(s, TITLES[name]))
       ?? (name === 'Transactions' && !known && book.SheetNames.length === 1 ? book.SheetNames[0] : undefined);
     if (!actual) return [];
     present.add(name);
@@ -89,14 +141,31 @@ export function readWorkbook(book: XLSX.WorkBook): ImportResult {
   return result;
 }
 
-export async function importExcel(file: File): Promise<ImportResult> {
+export const MAX_BYTES = 10 * 1024 * 1024;
+export const MAX_ROWS = 50_000;
+/** A refusal whose message is safe and useful to show as is. */
+export class FileLimit extends Error {}
+
+function checkRows(book: XLSX.WorkBook): XLSX.WorkBook {
+  // A truncated workbook keeps its real range in "!fullref"; a truncated CSV only has "!ref".
+  if (Object.values(book.Sheets).some((s) => XLSX.utils.decode_range(s['!fullref'] ?? s['!ref'] ?? 'A1').e.r > MAX_ROWS)) {
+    throw new FileLimit(`That file has more than ${MAX_ROWS.toLocaleString('en-IN')} rows. Split it and import in parts.`);
+  }
+  return book;
+}
+
+/** Files are untrusted: size and row count are bounded before they can freeze the page. */
+export async function readFile(file: File): Promise<XLSX.WorkBook> {
+  if (file.size > MAX_BYTES) throw new FileLimit('That file is larger than 10 MB.');
+  const sheetRows = MAX_ROWS + 2; // header, the limit, and one row to reveal an excess
   const isCsv = /\.csv$/i.test(file.name);
   // raw: true keeps CSV text as-is, so DD/MM dates are not reinterpreted as MM/DD.
-  const book = isCsv
-    ? XLSX.read(await file.text(), { type: 'string', raw: true })
-    : XLSX.read(await file.arrayBuffer(), { type: 'array' });
-  return readWorkbook(book);
+  return checkRows(isCsv
+    ? XLSX.read(await file.text(), { type: 'string', raw: true, sheetRows })
+    : XLSX.read(await file.arrayBuffer(), { type: 'array', sheetRows }));
 }
+
+export const importExcel = async (file: File): Promise<ImportResult> => readWorkbook(await readFile(file));
 
 const keyed = <T>(current: T[], incoming: T[], key: (x: T) => string): T[] =>
   [...new Map([...current, ...incoming].map((x) => [key(x), x])).values()];

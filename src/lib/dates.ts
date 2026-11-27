@@ -30,6 +30,16 @@ export function addMonths(iso: string, months: number): string {
   return toISO(first);
 }
 
+/** The next due date, returning to the intended day after a shorter month. */
+export function nextDue(due: string, months: number, intendedDay?: number): { date: string; day: number } {
+  const current = Number(due.slice(8));
+  const lastOf = (iso: string) => new Date(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), 0).getDate();
+  // The remembered day applies only if this date is that day, clamped; otherwise the date was edited.
+  const day = intendedDay && Math.min(intendedDay, lastOf(due)) === current ? intendedDay : current;
+  const month = addMonths(`${due.slice(0, 7)}-01`, months).slice(0, 7);
+  return { date: `${month}-${String(Math.min(day, lastOf(`${month}-01`))).padStart(2, '0')}`, day };
+}
+
 export function daysBetween(from: string, to: string): number {
   const a = parseISO(from), b = parseISO(to);
   return a && b ? Math.round((b.getTime() - a.getTime()) / 86_400_000) : 0;
@@ -38,6 +48,8 @@ export function daysBetween(from: string, to: string): number {
 export const monthKey = (iso: string): string => iso.slice(0, 7);
 export const shiftMonth = (month: string, by: number): string => monthKey(addMonths(`${month}-01`, by));
 export const monthLabel = (month: string): string =>
-  (parseISO(`${month}-01`) ?? new Date()).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+  (parseISO(`${month}-01`) ?? new Date()).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+/** Compact axis label; the apostrophe stops the year reading as a day. */
+export const monthTick = (month: string): string => `${monthLabel(month).slice(0, -5)} ’${month.slice(2, 4)}`;
 export const dateLabel = (iso: string): string =>
   parseISO(iso)?.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) ?? iso;

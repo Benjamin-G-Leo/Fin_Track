@@ -2,14 +2,13 @@ import { useState, type FormEvent } from 'react';
 import { Check, Pencil, Trash2 } from 'lucide-react';
 import { saveTransaction } from '../components/TransactionForm';
 import { Button, Card, Empty, Field, Select } from '../components/ui';
-import { addMonths, dateLabel, todayISO } from '../lib/dates';
+import { dateLabel, nextDue, todayISO } from '../lib/dates';
 import { formatINR } from '../lib/format';
 import { matchRule } from '../lib/rules';
 import { defaultNature, oneOf, parseBill } from '../lib/validate';
-import { db, knownAccounts, useData } from '../store';
-import { CATEGORIES, FREQUENCIES, type Frequency, type RecurringBill } from '../types';
+import { billDays, db, knownAccounts, useData } from '../store';
+import { CATEGORIES, FREQUENCIES, MONTHS_PER, type RecurringBill } from '../types';
 
-const STEP: Record<Frequency, number> = { Monthly: 1, Quarterly: 3, Yearly: 12 };
 const empty = () => ({ id: '', name: '', amount: '', frequency: 'Monthly', nextDueDate: todayISO(), category: 'Utilities & Bills', account: 'HDFC UPI' });
 
 export default function Bills() {
@@ -17,7 +16,7 @@ export default function Bills() {
   const [form, setForm] = useState(empty);
   const [error, setError] = useState('');
   const set = (key: keyof ReturnType<typeof empty>) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
-  const monthly = data.bills.reduce((a, b) => a + b.amount / STEP[b.frequency], 0);
+  const monthly = data.bills.reduce((a, b) => a + b.amount / MONTHS_PER[b.frequency], 0);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -36,7 +35,10 @@ export default function Bills() {
       date: todayISO(), type, amount: bill.amount, category, merchant: bill.name, account: bill.account, isReimbursable: false,
       subCategory: rule?.category === category ? rule.subCategory : 'Recurring', spendingNature: defaultNature(type, category),
     });
-    if (saved) db.bills.set((l) => l.map((b) => (b.id === bill.id ? { ...b, nextDueDate: addMonths(b.nextDueDate, STEP[b.frequency]) } : b)));
+    if (!saved) return;
+    const next = nextDue(bill.nextDueDate, MONTHS_PER[bill.frequency], billDays.get()[bill.id]);
+    billDays.set((days) => ({ ...days, [bill.id]: next.day }));
+    db.bills.set((l) => l.map((b) => (b.id === bill.id ? { ...b, nextDueDate: next.date } : b)));
   };
 
   return (

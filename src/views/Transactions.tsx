@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import QuickAdd from '../components/QuickAdd';
+import SmartPaste from '../components/SmartPaste';
 import TransactionForm from '../components/TransactionForm';
 import { Button, Card, Empty, Select } from '../components/ui';
 import { dateLabel, monthKey } from '../lib/dates';
@@ -39,6 +40,7 @@ export default function Transactions({ month }: { month: string }) {
   return (
     <div className="space-y-4">
       <QuickAdd />
+      <SmartPaste />
       <Card title={`Transactions (${rows.length})`}>
         <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <input className="field" aria-label="Search" placeholder="Search merchant" value={query} onChange={(e) => setQuery(e.target.value)} />
