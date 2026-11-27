@@ -273,9 +273,11 @@ This project has not had an independent security audit.
 
 ### Code map
 
-If you use [graphify](https://docs.graphify.com), you can build a knowledge graph of the code. The
-output goes to `graphify-out/` on your computer and is not part of the repository. Open `graph.html`
-in a browser, or read `GRAPH_REPORT.md`.
+`graphify-out/` holds a knowledge graph of the code, built with
+[graphify](https://docs.graphify.com): `GRAPH_REPORT.md` is the readable summary, `graph.json` the data
+and `graph.html` an interactive view (download it and open it in a browser). It is a snapshot, so
+refresh it after larger changes and commit those three files (use `git add -f` if your own Git settings
+ignore the folder):
 
 ```bash
 graphify update .
