@@ -4,16 +4,18 @@ import { detectAccount } from './accounts';
 import { redact } from './redact';
 import { defaultNature, oneOf, parseAmount, parseDate, parseTransaction, text, type Row } from './validate';
 
-/** "~…-latest" is an OpenRouter alias, so the default does not stop working when a model is retired. */
-export const DEFAULT_MODEL = '~google/gemini-flash-latest';
-export const MODEL_CHOICES = [DEFAULT_MODEL, 'anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-5.5', 'google/gemini-3.5-flash-lite'];
+/** OpenRouter's router over whichever free models are currently available. */
+export const DEFAULT_MODEL = 'openrouter/free';
+export const MODEL_CHOICES = [DEFAULT_MODEL, 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3.5-super-vl:free'];
+/** The app never uses paid models: only the free router and ":free" variants are accepted. */
+export const isFreeModel = (model: string): boolean => model === DEFAULT_MODEL || /^[\w.-]+\/[\w.-]+:free$/.test(model);
 export const MAX_BATCH = 200;
 
 const ERRORS: Record<number, string> = {
   401: 'the API key was rejected',
-  402: 'the OpenRouter account is out of credit',
-  404: 'no provider is available for that model; choose another, or relax the no-storage option in AI settings',
-  429: 'rate limited; try again shortly',
+  402: 'OpenRouter refused the free request; check the account and key limits',
+  404: 'no free provider is available for that model; choose another, or relax the no-storage option in AI settings',
+  429: 'the free-model rate limit was reached; try again later',
 };
 
 const enums = `type: ${TRANSACTION_TYPES.join(' | ')}. category: ${CATEGORIES.join(' | ')}. spendingNature: ${SPENDING_NATURES.join(' | ')}.`;
@@ -21,6 +23,7 @@ const enums = `type: ${TRANSACTION_TYPES.join(' | ')}. category: ${CATEGORIES.jo
 /** One chat completion that must answer with a JSON object. */
 async function chatJson(settings: AiSettings, system: string, user: string): Promise<Row> {
   if (!settings.apiKey) throw new Error('no API key is set');
+  if (!isFreeModel(settings.model)) throw new Error('only free models are allowed; choose one in AI settings');
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     credentials: 'omit',
@@ -31,7 +34,11 @@ async function chatJson(settings: AiSettings, system: string, user: string): Pro
       temperature: 0,
       response_format: { type: 'json_object' },
       // Route only to providers that do not store prompts, unless the user turns this off.
-      ...(settings.denyDataCollection === false ? {} : { provider: { data_collection: 'deny' } }),
+      // A zero price ceiling makes OpenRouter refuse the request rather than ever bill it.
+      provider: {
+        max_price: { prompt: 0, completion: 0, request: 0 },
+        ...(settings.denyDataCollection === false ? {} : { data_collection: 'deny' }),
+      },
       messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
     }),
     signal: AbortSignal.timeout(60_000),

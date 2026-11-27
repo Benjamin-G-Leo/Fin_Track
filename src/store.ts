@@ -1,5 +1,5 @@
 import { todayISO } from './lib/dates';
-import { DEFAULT_MODEL } from './lib/openrouter';
+import { DEFAULT_MODEL, isFreeModel } from './lib/openrouter';
 import { DEFAULT_RULES } from './lib/rules';
 import type { Preset } from './lib/statement';
 import { addSample, removeSample, type SampleManifest } from './lib/sample';
@@ -81,7 +81,8 @@ export interface AiSettings { apiKey: string; model: string; denyDataCollection?
 export const aiSettings = stored<AiSettings>('openrouter', { apiKey: '', model: DEFAULT_MODEL }, (raw) => {
   const r = raw as Partial<AiSettings>;
   return {
-    apiKey: String(r.apiKey ?? ''), model: String(r.model || DEFAULT_MODEL),
+    apiKey: String(r.apiKey ?? ''), // A paid model saved by an earlier version is replaced.
+    model: isFreeModel(String(r.model)) ? String(r.model) : DEFAULT_MODEL,
     denyDataCollection: r.denyDataCollection !== false, privateWords: String(r.privateWords ?? ''),
   };
 });

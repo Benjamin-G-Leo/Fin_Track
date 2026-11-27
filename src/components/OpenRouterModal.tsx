@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { KeyRound, Trash2, X } from 'lucide-react';
-import { DEFAULT_MODEL, MODEL_CHOICES } from '../lib/openrouter';
+import { DEFAULT_MODEL, isFreeModel, MODEL_CHOICES } from '../lib/openrouter';
 import { useStored } from '../lib/storage';
 import { aiSettings, clearAiKey } from '../store';
 import { Button, Field } from './ui';
@@ -32,6 +32,7 @@ export default function OpenRouterModal() {
 
   const save = (e: FormEvent) => {
     e.preventDefault();
+    if (!isFreeModel(model.trim() || DEFAULT_MODEL)) return setMessage('Only free models are allowed: the ID must end in ":free".');
     aiSettings.set({ apiKey: apiKey.trim() || saved.apiKey, model: model.trim() || DEFAULT_MODEL, denyDataCollection: deny, privateWords: words });
     setApiKey(''); setMessage('Saved in this browser.');
   };
@@ -43,7 +44,7 @@ export default function OpenRouterModal() {
         <Button aria-label="Close" onClick={() => dialog.current?.close()}><X size={14} /></Button>
       </header>
       <p className="mb-3 text-sm text-muted">
-        Optional. Your key and settings are kept only in this browser’s localStorage (encrypted if you turn on the app lock), and the key is sent only to openrouter.ai.
+        Optional, and uses free models only. Your key and settings are kept only in this browser’s localStorage (encrypted if you turn on the app lock), and the key is sent only to openrouter.ai.
         Use a key with a low spending limit.
       </p>
       <form onSubmit={save} className="space-y-3">
@@ -59,7 +60,7 @@ export default function OpenRouterModal() {
             {[...MODEL_CHOICES, CUSTOM].map((m) => <option key={m}>{m}</option>)}
           </select>
         </Field>
-        {custom && <Field label="Model ID"><input className="field" value={model} onChange={(e) => setModel(e.target.value)} /></Field>}
+        {custom && <Field label="Model ID (free only, ends in :free)"><input className="field" value={model} onChange={(e) => setModel(e.target.value)} /></Field>}
         <Field label="Always hide these words (comma separated)">
           <input className="field" placeholder="e.g. your name, family names, employer" value={words} onChange={(e) => setWords(e.target.value)} />
         </Field>
