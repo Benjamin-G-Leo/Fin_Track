@@ -5,8 +5,8 @@ import { todayISO } from '../lib/dates';
 import { applyImport, exportExcel, importExcel } from '../lib/excel';
 import { mergeTransactions } from '../lib/ids';
 import { useStored } from '../lib/storage';
-import { aiSettings, db, useData } from '../store';
-import type { AppData } from '../types';
+import SampleControls from '../components/SampleControls';
+import { aiSettings, commit, useData } from '../store';
 
 const MERGE = 'Merge with current data';
 const REPLACE = 'Replace sheets found in the file';
@@ -17,11 +17,6 @@ export default function DataView() {
   const [mode, setMode] = useState(MERGE);
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
-
-  const commit = (next: AppData) => {
-    db.transactions.set(next.transactions); db.budgets.set(next.budgets); db.bills.set(next.bills);
-    db.funds.set(next.funds); db.rules.set(next.rules);
-  };
 
   const onFile = async (file: File) => {
     setMessage(''); setErrors([]);
@@ -44,6 +39,9 @@ export default function DataView() {
 
   return (
     <div className="space-y-4">
+      <Card title="Sample data">
+        <SampleControls />
+      </Card>
       <Card title="Excel export">
         <p className="mb-3 text-sm text-muted">Everything except your API key, one sheet per record type. Browser storage can be cleared, so export regularly as a backup.</p>
         <Button variant="primary" onClick={() => exportExcel(data, `fin-track-${todayISO()}.xlsx`)}><Download size={16} />Export .xlsx</Button>

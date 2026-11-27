@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Database, LayoutDashboard, List, PiggyBank, Repeat, Tags, Target } from 'lucide-react';
+import SampleControls from './components/SampleControls';
 import { Button } from './components/ui';
 import { monthKey, monthLabel, shiftMonth, todayISO } from './lib/dates';
-import { useStorageError } from './lib/storage';
+import { useStorageError, useStored } from './lib/storage';
+import { sampleManifest } from './store';
 import Bills from './views/Bills';
 import Budgets from './views/Budgets';
 import Dashboard from './views/Dashboard';
@@ -28,6 +30,7 @@ export default function App() {
   const [tab, setTab] = useState<TabId>(readTab);
   const [month, setMonth] = useState(() => monthKey(todayISO()));
   const storageError = useStorageError();
+  const sample = useStored(sampleManifest);
   const usesMonth = tab === 'dashboard' || tab === 'transactions' || tab === 'budgets';
 
   useEffect(() => {
@@ -59,6 +62,7 @@ export default function App() {
         ))}
       </nav>
       {storageError && <p role="alert" className="mb-4 rounded-lg border border-danger p-3 text-sm text-danger">{storageError}</p>}
+      {sample && tab !== 'data' && <div className="mb-4 rounded-lg border border-line bg-surface p-3"><SampleControls /></div>}
       <main>
         {tab === 'dashboard' && <Dashboard month={month} />}
         {tab === 'transactions' && <Transactions month={month} />}

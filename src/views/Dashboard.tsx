@@ -1,14 +1,16 @@
-import { BreakdownChart, TrendChart } from '../components/Charts';
+import { BudgetChart, CumulativeChart, TrendChart } from '../components/Charts';
+import SafeToSpend from '../components/SafeToSpend';
+import SplitCard from '../components/SplitCard';
 import QuickAdd from '../components/QuickAdd';
 import { saveTransaction } from '../components/TransactionForm';
 import { Button, Card, Empty } from '../components/ui';
-import { byCategory, byNature, monthSummary, owedToMe, trend } from '../lib/analytics';
+import { budgetSplit, categoryVsBudget, cumulativeSpend, monthSummary, owedToMe, trend } from '../lib/analytics';
 import { dateLabel, daysBetween, todayISO } from '../lib/dates';
 import { formatINR } from '../lib/format';
 import { useData } from '../store';
 
 export default function Dashboard({ month }: { month: string }) {
-  const { transactions, bills } = useData();
+  const { transactions, bills, budgets } = useData();
   const s = monthSummary(transactions, month);
   const owed = owedToMe(transactions);
   const today = todayISO();
@@ -20,6 +22,11 @@ export default function Dashboard({ month }: { month: string }) {
   return (
     <div className="space-y-4">
       <QuickAdd />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <SafeToSpend month={month} />
+        <SplitCard split={budgetSplit(transactions, month)} />
+      </div>
+      <h2 className="font-semibold">Cash flow</h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {tiles.map(([label, value]) => (
           <Card key={label}>
@@ -28,10 +35,12 @@ export default function Dashboard({ month }: { month: string }) {
           </Card>
         ))}
       </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <BudgetChart data={categoryVsBudget(transactions, budgets, month)} />
+        <CumulativeChart data={cumulativeSpend(transactions, month, today)} />
+      </div>
       <TrendChart data={trend(transactions, month)} />
       <div className="grid gap-4 lg:grid-cols-2">
-        <BreakdownChart title="Spending by category" data={byCategory(transactions, month)} />
-        <BreakdownChart title="Spending by nature" data={byNature(transactions, month)} />
         <Card title="Bills due in 30 days">
           {!upcoming.length ? <Empty>Nothing due.</Empty> : (
             <ul className="divide-y divide-line text-sm">

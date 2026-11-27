@@ -1,5 +1,5 @@
-import { CATEGORIES, SPENDING_NATURES, type SinkingFund, type Transaction } from '../types';
-import { monthKey, shiftMonth } from './dates';
+import { CATEGORIES, SPENDING_NATURES, type Budget, type RecurringBill, type SinkingFund, type Transaction } from '../types';
+import { addDays, addMonths, daysBetween, monthKey, shiftMonth } from './dates';
 import { round2 } from './format';
 import { normalizeMerchant } from './ids';
 
@@ -58,4 +58,58 @@ export function fundPlan(fund: SinkingFund, today: string) {
     overdue: remaining > 0 && fund.targetDate < today,
     progress: Math.min(100, (fund.currentSaved / fund.targetAmount) * 100),
   };
+}
+
+const monthEnd = (iso: string): string => addDays(addMonths(`${monthKey(iso)}-01`, 1), -1);
+
+/**
+ * (Income − unpaid bills due by month end − savings target − personal expenses) / days left,
+ * for the month containing `today`; today counts as a day left.
+ * Investments already made or still due count towards the target, and raise it if they exceed it.
+ */
+export function safeToSpend(all: Transaction[], bills: RecurringBill[], target: number, today: string) {
+  const { income, expense, invested } = monthSummary(all, monthKey(today));
+  const end = monthEnd(today);
+  const due = bills.filter((b) => b.nextDueDate <= end);
+  const total = (list: RecurringBill[]) => round2(list.reduce((a, b) => a + b.amount, 0));
+  const fixedBills = total(due.filter((b) => b.category !== 'Investments'));
+  const baseTarget = target > 0 ? target : round2(income * 0.2);
+  const savings = Math.max(baseTarget, round2(invested + total(due.filter((b) => b.category === 'Investments'))));
+  const remaining = round2(income - fixedBills - savings - expense);
+  const daysLeft = daysBetween(today, end) + 1;
+  return { income, fixedBills, savings, expense, remaining, daysLeft, daily: Math.max(0, round2(remaining / daysLeft)) };
+}
+
+/** 50/30/20 split of the month's income. Savings = investments plus expenses marked Savings. */
+export function budgetSplit(all: Transaction[], month: string) {
+  const { income, invested } = monthSummary(all, month);
+  const spent = byNature(all, month);
+  const of = (...names: string[]) => round2(spent.filter((s) => names.includes(s.name)).reduce((a, s) => a + s.value, 0));
+  const rows = [
+    { name: 'Needs', amount: of('Fixed Need', 'Variable Need'), target: 50 },
+    { name: 'Wants', amount: of('Want'), target: 30 },
+    { name: 'Savings', amount: round2(of('Savings') + invested), target: 20 },
+  ];
+  return { income, rows: rows.map((r) => ({ ...r, percent: income ? (r.amount / income) * 100 : 0 })) };
+}
+
+export function categoryVsBudget(all: Transaction[], budgets: Budget[], month: string) {
+  const spent = new Map(byCategory(all, month).map((c) => [c.name, c.value]));
+  const limits = new Map(budgets.map((b) => [b.category, b.monthlyLimit]));
+  return CATEGORIES.filter((c) => spent.has(c) || limits.has(c))
+    .map((name) => ({ name, spent: spent.get(name) ?? 0, budget: limits.get(name) ?? 0 }));
+}
+
+/** Running total of personal expenses by day; stops at today for the current month. */
+export function cumulativeSpend(all: Transaction[], month: string, today: string) {
+  const first = `${month}-01`;
+  if (month > monthKey(today)) return [];
+  const last = month === monthKey(today) ? today : monthEnd(first);
+  const list = personalExpenses(all).filter((t) => monthKey(t.date) === month);
+  let total = 0;
+  return Array.from({ length: Number(last.slice(8)) }, (_, i) => {
+    const date = addDays(first, i);
+    total = round2(total + sum(list.filter((t) => t.date === date)));
+    return { day: i + 1, total };
+  });
 }

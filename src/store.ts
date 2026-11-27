@@ -1,5 +1,7 @@
+import { todayISO } from './lib/dates';
 import { DEFAULT_RULES } from './lib/rules';
-import { stored, useStored } from './lib/storage';
+import { addSample, removeSample, type SampleManifest } from './lib/sample';
+import { PREFIX, stored, useStored } from './lib/storage';
 import { parseBill, parseBudget, parseFund, parseRule, parseTransaction, type Parsed, type Row } from './lib/validate';
 import { DEFAULT_ACCOUNTS, type AppData, type Budget, type KeywordRule, type RecurringBill, type SinkingFund, type Transaction } from './types';
 
@@ -18,6 +20,47 @@ export const db = {
   funds: stored<SinkingFund[]>('funds', [], list(parseFund)),
   rules: stored<KeywordRule[]>('rules', DEFAULT_RULES, list(parseRule)),
 };
+
+export const sampleManifest = stored<SampleManifest | null>('sample', null, (raw) => {
+  const m = raw as SampleManifest | null;
+  if (m && ![m.transactions, m.budgets, m.bills, m.funds].every(Array.isArray)) throw new Error('invalid data');
+  return m;
+});
+
+/** 0 means "not set": Safe-to-Spend then assumes 20% of income. */
+export const savingsTarget = stored<number>('savingsTarget', 0, (raw) => (typeof raw === 'number' && raw >= 0 ? raw : 0));
+
+const snapshot = (): AppData => ({
+  transactions: db.transactions.get(), budgets: db.budgets.get(), bills: db.bills.get(),
+  funds: db.funds.get(), rules: db.rules.get(),
+});
+
+export function commit(next: AppData) {
+  db.transactions.set(next.transactions); db.budgets.set(next.budgets); db.bills.set(next.bills);
+  db.funds.set(next.funds); db.rules.set(next.rules);
+}
+
+export function clearSample() {
+  const manifest = sampleManifest.get();
+  if (manifest) commit(removeSample(snapshot(), manifest));
+  sampleManifest.set(null);
+}
+
+/** Replaces any earlier sample with a fresh one dated this month. */
+export function loadSample() {
+  clearSample();
+  const { next, manifest } = addSample(snapshot(), todayISO());
+  commit(next);
+  sampleManifest.set(manifest);
+}
+
+/** First launch only: any existing app key (even an emptied list) means "do not seed". */
+export function seedOnFirstRun() {
+  try {
+    const used = ['transactions', 'budgets', 'bills', 'funds', 'sample'].some((k) => localStorage.getItem(PREFIX + k) !== null);
+    if (!used) loadSample();
+  } catch { /* storage blocked: start empty */ }
+}
 
 export interface AiSettings { apiKey: string; model: string }
 export const aiSettings = stored<AiSettings>('openrouter', { apiKey: '', model: 'openrouter/auto' }, (raw) => {

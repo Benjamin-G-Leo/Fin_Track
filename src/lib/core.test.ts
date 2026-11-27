@@ -1,7 +1,8 @@
 import * as XLSX from 'xlsx';
 import { describe, expect, it } from 'vitest';
 import type { AppData, TransactionDraft } from '../types';
-import { fundPlan, monthSummary, owedToMe } from './analytics';
+import { budgetSplit, cumulativeSpend, fundPlan, monthSummary, owedToMe, safeToSpend } from './analytics';
+import { addSample, removeSample, sampleData } from './sample';
 import { addMonths } from './dates';
 import { applyImport, buildWorkbook, readWorkbook } from './excel';
 import { formatINR } from './format';
@@ -90,5 +91,46 @@ describe('excel', () => {
     expect(file.transactions[0]).toMatchObject({ date: '2026-04-03', amount: 100 });
     expect(file.errors).toEqual(['Transactions row 3: invalid date']);
     expect(applyImport(data, file, 'replace', mergeTransactions).next.budgets).toEqual(data.budgets);
+  });
+});
+
+describe('spec examples', () => {
+  it('parses the two quick-add examples', () => {
+    expect(quick('450 lunch swiggy UPI')).toMatchObject({ amount: 450, category: 'Food & Dining', account: 'HDFC UPI', merchant: 'Lunch swiggy' });
+    expect(quick('2500 electricity bill')).toMatchObject({ amount: 2500, category: 'Utilities & Bills', spendingNature: 'Fixed Need' });
+  });
+});
+
+describe('dashboard maths', () => {
+  const tx = (type: TransactionDraft['type'], amount: number, extra: Partial<TransactionDraft> = {}) =>
+    ({ ...draft, type, amount, merchant: `${type}${amount}`, ...extra });
+  const { transactions } = mergeTransactions([], [tx('Income', 100000), tx('Expense', 10000), tx('Investment', 5000)]);
+  const bill = { id: 'b', name: 'Rent', amount: 20000, frequency: 'Monthly' as const, nextDueDate: '2026-11-29', category: 'Rent & Housing', account: 'Cash' };
+
+  it('computes safe-to-spend with a default 20% target', () => {
+    // (100000 − 20000 − 20000 − 10000) / 4 days (27th–30th)
+    expect(safeToSpend(transactions, [bill, { ...bill, id: 'next', nextDueDate: '2026-12-01' }], 0, '2026-11-27'))
+      .toMatchObject({ fixedBills: 20000, savings: 20000, daysLeft: 4, daily: 12500 });
+  });
+  it('never shows a negative allowance', () =>
+    expect(safeToSpend(transactions, [bill], 90000, '2026-11-30')).toMatchObject({ remaining: -20000, daily: 0 }));
+  it('splits income and accumulates spend', () => {
+    expect(budgetSplit(transactions, '2026-11').rows.map((r) => r.percent)).toEqual([0, 10, 5]);
+    expect(cumulativeSpend(transactions, '2026-11', '2026-11-03').map((d) => d.total)).toEqual([0, 10000, 10000]);
+  });
+});
+
+describe('sample data', () => {
+  const empty: AppData = { transactions: [], budgets: [], bills: [], funds: [], rules: [] };
+  it('has 15 unique transactions in the current month, even on the 1st', () => {
+    const s = sampleData('2026-11-01');
+    expect(s.transactions).toHaveLength(15);
+    expect(new Set(s.transactions.map((t) => t.id)).size).toBe(15);
+    expect(s.transactions.every((t) => t.date === '2026-11-01')).toBe(true);
+  });
+  it('clears only what it added', () => {
+    const mine: AppData = { ...empty, transactions: mergeTransactions([], [draft]).transactions, budgets: [{ category: 'Shopping', monthlyLimit: 1 }] };
+    const { next, manifest } = addSample(mine, '2026-11-27');
+    expect(removeSample(next, manifest)).toEqual(mine);
   });
 });
