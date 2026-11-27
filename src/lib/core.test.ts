@@ -12,7 +12,7 @@ import { applyImport, buildWorkbook, readFile, MAX_BYTES, MAX_ROWS, readWorkbook
 import { appendTransactions, BANK_PRESETS, cleanMerchant, detectPreset, findHeaderRow, flagDuplicates, mapColumns, parseStatement, toGrid } from './statement';
 import { disableLock, enableLock, forgetKey, read, unlock, write } from './vault';
 import { formatINR } from './format';
-import { aiBatch, aiInsights, auditPayload } from './openrouter';
+import { aiBatch, aiInsights, auditPayload, isFreeModel, MODEL_CHOICES } from './openrouter';
 import { redact } from './redact';
 import { amountAppears, parseSms, splitMessages } from './sms';
 import { baseId, mergeTransactions } from './ids';
@@ -227,7 +227,7 @@ describe('sms alerts', () => {
 
 describe('openrouter client', () => {
   afterEach(() => vi.unstubAllGlobals());
-  const settings = { apiKey: 'test-key', model: 'm' };
+  const settings = { apiKey: 'test-key', model: 'openrouter/free' };
   const stub = (content: unknown, status = 200) => {
     const fetchMock = vi.fn(async (_url: string, _init: RequestInit) =>
       new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }] }), { status }));
@@ -287,7 +287,7 @@ describe('regressions', () => {
     const fetchMock = vi.fn(async (_u: string, _i: RequestInit) => new Response(JSON.stringify(
       { choices: [{ message: { content: JSON.stringify({ date: '2026-11-27', amount: 50, merchant: 'Tea', account: 'Wrong' }) } }] })));
     vi.stubGlobal('fetch', fetchMock);
-    const out = await aiParse('50 tea sbi 9876543210', ['SBI Savings', 'My Secret Account'], '2026-11-27', { apiKey: 'k', model: 'm' });
+    const out = await aiParse('50 tea sbi 9876543210', ['SBI Savings', 'My Secret Account'], '2026-11-27', { apiKey: 'k', model: 'openrouter/free' });
     vi.unstubAllGlobals();
     expect(out.account).toBe('SBI Savings');
     expect(String(fetchMock.mock.calls[0]![1].body)).not.toMatch(/Secret|SBI Savings|9876543210/);
@@ -366,8 +366,21 @@ describe('stronger masking and retention', () => {
   it('asks for providers that do not store prompts', async () => {
     const f = vi.fn(async (_u: string, _i: RequestInit) => new Response(JSON.stringify({ choices: [{ message: { content: '{"items":[]}' } }] })));
     vi.stubGlobal('fetch', f);
-    await aiBatch([{ id: 1, text: 'a' }], { apiKey: 'k', model: 'm' });
+    await aiBatch([{ id: 1, text: 'a' }], { apiKey: 'k', model: 'openrouter/free' });
     vi.unstubAllGlobals();
-    expect(JSON.parse(String(f.mock.calls[0]![1].body)).provider).toEqual({ data_collection: 'deny' });
+    expect(JSON.parse(String(f.mock.calls[0]![1].body)).provider).toEqual({ max_price: { prompt: 0, completion: 0, request: 0 }, data_collection: 'deny' });
+  });
+});
+
+describe('free models only', () => {
+  it('offers only free choices and refuses paid ones before any request', async () => {
+    expect(MODEL_CHOICES.every(isFreeModel)).toBe(true);
+    const f = vi.fn();
+    vi.stubGlobal('fetch', f);
+    for (const model of ['google/gemini-3.5-flash', '~google/gemini-flash-latest', 'openrouter/auto', 'x/y:free:online']) {
+      await expect(aiBatch([{ id: 1, text: 'a' }], { apiKey: 'k', model })).rejects.toThrow('only free models');
+    }
+    expect(f).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });
