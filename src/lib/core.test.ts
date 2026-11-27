@@ -334,7 +334,9 @@ describe('app lock', () => {
 
   it('encrypts existing and new values, and only the right passphrase opens them', async () => {
     localStorage.setItem(K, 'secret-merchant');
+    localStorage.setItem('fin_tracker_v1_theme', 'Light');
     await enableLock('correct horse battery');
+    expect(localStorage.getItem('fin_tracker_v1_theme')).toBe('Light');
     expect(localStorage.getItem(K)).toMatch(/^enc1:/);
     expect(localStorage.getItem(K)).not.toContain('secret');
     write(K, 'new-secret');

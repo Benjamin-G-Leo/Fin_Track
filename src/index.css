@@ -6,13 +6,20 @@
   --accent: #0f766e; --on-accent: #ffffff; --danger: #b42318; --warn: #8a5300;
   --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a;
 }
+/* Dark applies when the device asks for it (unless Light is chosen) or when Dark is chosen. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --page: #111110; --surface: #1a1a19; --ink: #f0efec; --muted: #c3c2b7; --line: #34332f;
-    --accent: #2dd4bf; --on-accent: #042f2a; --danger: #ff8a80; --warn: #f5b942;
-    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+  :root:not([data-theme="light"]) {
+  color-scheme: dark;
+  --page: #111110; --surface: #1a1a19; --ink: #f0efec; --muted: #c3c2b7; --line: #34332f;
+  --accent: #2dd4bf; --on-accent: #042f2a; --danger: #ff8a80; --warn: #f5b942;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
   }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #111110; --surface: #1a1a19; --ink: #f0efec; --muted: #c3c2b7; --line: #34332f;
+  --accent: #2dd4bf; --on-accent: #042f2a; --danger: #ff8a80; --warn: #f5b942;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
 }
 @theme inline {
   --color-page: var(--page); --color-surface: var(--surface); --color-ink: var(--ink);

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { openTour } from '../components/Tour';
+import { Play } from 'lucide-react';
+import { openTour, STEPS } from '../components/Tour';
 import { Button, Card } from '../components/ui';
 
 const Topic = ({ title, children }: { title: string; children: ReactNode }) => (
@@ -12,7 +13,13 @@ const Topic = ({ title, children }: { title: string; children: ReactNode }) => (
 export default function Guide() {
   return (
     <div className="space-y-3">
-      <Card title="How to use Fin Track" action={<Button onClick={openTour}>Replay tour</Button>}>
+      <Card title="Tutorial" action={<Button variant="primary" onClick={openTour}><Play size={14} />Replay tutorial</Button>}>
+        <ol className="space-y-2 text-sm">
+          {STEPS.map((s, i) => <li key={s.title}><strong>{i + 1}. {s.title}</strong><span className="block text-muted">{s.body}</span></li>)}
+        </ol>
+      </Card>
+
+      <Card title="Getting started">
         <p className="text-sm">New here? Do these four things first:</p>
         <ol className="mt-2 list-decimal pl-5 text-sm">
           <li>Press <strong>Clear sample data</strong> when you have finished exploring.</li>
@@ -80,6 +87,7 @@ export default function Guide() {
         </ul>
       </Topic>
 
+      <p className="text-xs text-muted">Switch between light and dark with the theme menu at the top.</p>
       <p className="text-xs text-muted">Fin Track keeps records. It does not give financial advice.</p>
     </div>
   );

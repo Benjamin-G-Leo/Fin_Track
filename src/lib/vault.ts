@@ -5,6 +5,7 @@
  */
 import { gcm } from '@noble/ciphers/aes.js';
 import { randomBytes } from '@noble/ciphers/utils.js';
+import { THEME_KEY } from './theme';
 
 export const PREFIX = 'fin_tracker_v1_';
 const META = `${PREFIX}vault`;
@@ -74,7 +75,7 @@ export function write(name: string, plain: string): void {
   localStorage.setItem(name, key ? seal(key, name, plain) : plain);
 }
 
-const dataKeys = () => Object.keys(localStorage).filter((k) => k.startsWith(PREFIX) && k !== META);
+const dataKeys = () => Object.keys(localStorage).filter((k) => k.startsWith(PREFIX) && k !== META && k !== THEME_KEY);
 
 export async function unlock(passphrase: string): Promise<boolean> {
   const m = meta();

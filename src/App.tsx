@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, CircleHelp, Database, Sparkles, LayoutDashboard, List, PiggyBank, Repeat, Tags, Target } from 'lucide-react';
 import OpenRouterModal, { openAiSettings } from './components/OpenRouterModal';
+import ThemeSwitch from './components/ThemeSwitch';
 import Tour from './components/Tour';
 import Guide from './views/Guide';
 import SampleControls from './components/SampleControls';
@@ -24,7 +25,7 @@ const TABS = [
   { id: 'goals', label: 'Goals', icon: Target },
   { id: 'rules', label: 'Rules', icon: Tags },
   { id: 'data', label: 'Import & Export', icon: Database },
-  { id: 'guide', label: 'Guide', icon: CircleHelp },
+  { id: 'guide', label: 'Tutorial', icon: CircleHelp },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
@@ -49,6 +50,7 @@ export default function App() {
     <div className="mx-auto max-w-6xl px-4 py-4">
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="mr-auto text-xl font-bold">₹ Fin Track</h1>
+        <ThemeSwitch />
         <Button onClick={openAiSettings}><Sparkles size={14} />AI settings</Button>
         {usesMonth && (
           <div className="flex items-center gap-2">

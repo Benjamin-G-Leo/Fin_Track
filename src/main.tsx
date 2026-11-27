@@ -1,9 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import Unlock from './components/Unlock';
+import { applyTheme, readTheme } from './lib/theme';
 import { isLockEnabled, isLockKey } from './lib/vault';
 import './index.css';
 
+applyTheme(readTheme());
 const root = createRoot(document.getElementById('root')!);
 const IDLE_LIMIT = 10 * 60_000;
 

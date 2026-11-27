@@ -3,12 +3,12 @@ import { useStored } from '../lib/storage';
 import { guideSeen } from '../store';
 import { Button } from './ui';
 
-const STEPS = [
+export const STEPS = [
   { title: 'Welcome to Fin Track', body: 'A private money tracker. Your records stay in this browser: no account and no server. You are looking at sample data, which you can clear at any time.' },
   { title: 'Add spending in one line', body: 'In Quick add, type something like “450 lunch swiggy UPI” and press Add. A preview shows how it will be saved.' },
   { title: 'Bring in your bank statement', body: 'Press “Import statement” and choose an Excel or CSV file from your bank. You review every row before anything is saved.' },
   { title: 'See where you stand', body: 'The Dashboard shows what is safe to spend each day, your budgets and who owes you money.' },
-  { title: 'Keep a backup', body: 'Clearing browser data deletes your records, so use “Full backup” on the Import & Export tab now and then. The Guide tab explains everything else.' },
+  { title: 'Keep a backup', body: 'Clearing browser data deletes your records, so use “Full backup” on the Import & Export tab now and then. The Tutorial tab explains everything else.' },
 ];
 
 const OPEN = 'fin-track:tour';

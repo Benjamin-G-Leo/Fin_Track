@@ -34,6 +34,7 @@ Your records stay in your own browser. There is no account, no server and no dat
 | **Reimbursements** | "Owed to Me" tracker for money others need to pay back |
 | **Automation** | Keyword rules that categorise merchants for you |
 | **Data** | Excel and CSV export, full backup and restore |
+| **Help and display** | First-visit tour, Tutorial tab, light, dark and system themes |
 | **Optional AI** | Parsing, categorising and monthly savings tips using free models through your own OpenRouter key |
 | **Protection** | Optional passphrase encryption |
 
@@ -73,8 +74,9 @@ Then open the address printed in the terminal, usually http://localhost:5173.
 
 ## Using the app
 
-A short tour opens on your first visit. The **Guide** tab covers the same ground in more detail and can
-replay the tour.
+Choose **Light**, **Dark** or **System** (follow your device) from the theme menu at the top.
+
+A short tour opens on your first visit. The **Tutorial** tab replays it, lists its steps and explains each feature.
 
 ### Quick add
 
@@ -190,6 +192,7 @@ src/
     ├── analytics.ts                           Dashboard maths
     ├── excel.ts                               Import and export
     ├── storage.ts, vault.ts                   Saving and encryption
+    ├── theme.ts                               Light and dark preference
     ├── openrouter.ts, redact.ts               Optional AI and masking
     └── core.test.ts                           Unit tests
 ```
@@ -200,7 +203,7 @@ src/
 |---|---|
 | React 19 and TypeScript | Interface and type safety |
 | Vite | Development server and build |
-| Tailwind CSS 4 | Styling, with light and dark themes |
+| Tailwind CSS 4 | Styling, with light, dark and system themes |
 | Recharts | Charts |
 | Lucide | Icons |
 | SheetJS (`xlsx`) | Excel and CSV files |
